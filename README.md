@@ -102,14 +102,12 @@
 MVVM, Repository 패턴을 사용하고 있으며,
 데이터 및 액션 바인딩에 RxSwift와 Combine을 사용하고 있습니다.
 
-<img src="https://user-images.githubusercontent.com/31477658/133812741-2c733799-bb53-41b1-a8db-cbdf995cc74e.png" width="100%" height="100%" >
-
 <br>
 
 ## 네트워크
 
 통신의 경우 APIRequester와 Router로 분리하고 의존성 주입과 제네릭을 사용함으로써 코드 중복을 방지하고
-유지 보수하기 쉽도록 개발했습니다.
+유지 보수하기 쉽도록 개발했습니다. Debug 일 때는 개발 서버 도메인을 바라보고, Release 일 때는 운영 서버 도메인을 바라보게 됩니다.
 
 ```swift
 import Foundation
@@ -123,6 +121,14 @@ enum Router {
     .....
     
     private var baseURL: String {
+        let baseURL: String
+
+        #if DEBUG
+        baseURL = ..
+        #else
+        baseURL = ..
+        #endif
+
         return "....."
     }
     
@@ -152,9 +158,17 @@ struct APIRequester {
     }
     
     func getRequest<T: Codable> (completion: @escaping Completion<T>) {
-        let request = AF.request(router.url, method: .get, headers: ["Authorization": token ?? "No value"]
-        )
-
+        guard let token = token else {
+            let createURLRequestFailedError = AFError.createURLRequestFailed(error: NetworkError.tokenError)
+            
+            completion(Result.failure(createURLRequestFailedError))
+            return
+        }
+        
+        let request = AF.request(router.url,
+                                 method: .get,
+                                 headers: ["Authorization": token])
+        
         request.responseDecodable(of: T.self) { response in
             completion(response.result)
         }
@@ -174,7 +188,7 @@ struct APIRequester {
 이외에도 Property Wrapper를 사용해 중복 코드를 줄이고 유지 보수성을 높이려고 노력했습니다.
 
 <img src="https://user-images.githubusercontent.com/31477658/133817270-11752429-fe60-47a9-8c1a-76d9f93b4f64.png" width="100%" height="100%" >
-<img src="https://user-images.githubusercontent.com/31477658/133817486-6283d017-54e9-4827-81b2-656f3bb1a901.png" width="100%" height="100%" >
+<img src="https://github.com/TikitakaDiary/duck-z_iOS_/assets/31477658/28eb1977-5c98-4080-9bca-93d03215e127" width="100%" height="100%" >
 
 ```swift
 // Property Wrapper
@@ -233,4 +247,4 @@ final class UserManager {
 
 ## 앱의 성능 및 사용성 고려
 
-알고리즘 개발시 시간복잡도를 고려하며 개발하고 있고, 이미지 캐싱, 이미지 리사이즈, 페이징, pull to refresh 등 다양한 기술을 적용함으로써 앱의 성능과 사용성을 고려했습니다.
+알고리즘 개발시 시간복잡도를 고려하며 개발하고 있고, 이미지 리사이즈, 이미지 캐싱, 페이징, pull to refresh 등 다양한 기술을 적용함으로써 앱의 성능과 사용성을 고려했습니다.
